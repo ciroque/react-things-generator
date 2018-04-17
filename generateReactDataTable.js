@@ -39,6 +39,8 @@ function main() {
   writePrimaryReduxComponent(opts);
   writeActionsJs(opts);
   writePrimaryCss(opts);
+  writeDetailsReactComponent(opts);
+  writeDetailsReduxComponent(opts);
 }
 
 const createDirectories = (opts) => {
@@ -107,6 +109,7 @@ const clear${opts.name}List = () => ({type: ACTIONS.CLEAR, payload: null});
 const replace${opts.name}List = (${opts.lowerCaseName}List) => ({type: ACTIONS.REPLACE, payload: ${opts.lowerCAseName}List});
 const add${opts.name} = (${opts.lowerCaseName}) => ({type: ACTIONS.ADD, payload: ${opts.lowerCaseName}});
 const remove${opts.name} = (${opts.lowerCaseName}) => ({type: ACTIONS.REMOVE, payload: ${opts.lowerCaseName}});
+const update${opts.name} = (${opts.lowerCaseName}) => ({type: ACTIONS.UPDATE, payload: ${opts.lowerCaseName}});
 
 export const load${opts.name}List = () => (dispatch) => {
   dispatch(setFetching());
@@ -187,7 +190,8 @@ const writeReducersJs = (opts) => {
       ADD: 'ACTIONS::${opts.upperCaseName}::ADD',
       CLEAR: 'ACTIONS::${opts.upperCaseName}::CLEAR',
       REMOVE: 'ACTIONS::${opts.upperCaseName}::REMOVE',
-      REPLACE: 'ACTIONS::${opts.upperCaseName}::REPLACE'
+      REPLACE: 'ACTIONS::${opts.upperCaseName}::REPLACE',
+      UPDATE: 'ACTIONS::${opts.upperCaseName}::UPDATE'
     };
 
     export const NULL_${opts.upperCaseName} = {};
@@ -213,6 +217,11 @@ const writeReducersJs = (opts) => {
           return payload;
         }
 
+        case ACTIONS.UPDATE: {
+          const others = state.filter(${opts.lowerCaseName} => ${opts.lowerCaseName}.id !== payload.id);
+          return [...others, payload];
+        }
+
         default: {
           return state;
         }
@@ -227,6 +236,84 @@ const writeReducersJs = (opts) => {
   `;
 
   writeDataToFile(`./${opts.lowerCaseName}/reducers.js`, fileData);
+};
+
+const writeDetailsReduxComponent = (opts) => {
+  console.log(`writing details redux component`);
+
+  const fileData = `
+import { connect } from 'react-redux';
+import { withRouter } from 'react-router-dom';
+import Details from "./details";
+
+const mapStateToProps = () => state => {
+  return {};
+};
+
+const mapDispatchToProps = () => dispatch => {
+  return {
+    delete${opts.name}: (${opts.lowerCaseName}) => dispatch(delete${opts.name}(${opts.lowerCaseName})),
+    save${opts.name}: (${opts.lowerCaseName}) => dispatch(save${opts.name}(${opts.lowerCaseName})),
+    update${opts.name}: (${opts.lowerCaseName}) => dispatch(update${opts.name}(${opts.lowerCaseName}))
+  };
+};
+
+export default withRouter(connect(mapStateToProps, mapDispatchToProps)(Details));
+  `;
+
+  writeDataToFile(`./${opts.lowerCaseName}/details/details.container.js`, fileData);
+};
+
+const writeDetailsReactComponent = (opts) => {
+  console.log(`writing details React component`);
+  const fileData = `
+import React from 'react';
+import './details.css';
+
+export default class Details extends React.Component {
+  constructor(props) {
+    super(props);
+  }
+
+  handleInputChange = (evt) => {
+    const target = evt.target;
+    const value = target.value;
+    return this.props.update${opts.name}(target, value);
+  };
+
+  renderForm = () => {
+    return (
+      <form>
+      </form>
+    );
+  };
+
+  renderToolbar = () => {
+    return (
+      <div className="toolbar-root">
+        <button
+          className="btn btn-success"
+        >Save</button>
+
+        <button
+          className="btn btn-danger"
+        >Delete</button>
+      </div>
+    );
+  };
+
+  render() {
+    return (
+      <div className="details-root ui-group">
+        {this.renderForm()}
+        {this.renderToolbar()}
+      </div>
+    );
+  }  
+};
+  `;
+
+  writeDataToFile(`./${opts.lowerCaseName}/details/details.js`, fileData);
 };
 
 const writeDataToFile = (fn, data) => {
