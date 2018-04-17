@@ -33,15 +33,21 @@ function main() {
   console.log(`
     opts: ${JSON.stringify(opts)}}
   `);
-  createDirectory(opts);
+  createDirectories(opts);
   writeReducersJs(opts);
   writePrimaryReactComponent(opts);
+  writePrimaryReduxComponent(opts);
+  writeActionsJs(opts);
+  writePrimaryCss(opts);
 }
 
-const createDirectory = (opts) => {
+const createDirectories = (opts) => {
   const fs = require('fs');
   if(!fs.existsSync(opts.lowerCaseName)) {
     fs.mkdirSync(opts.lowerCaseName);
+  }
+  if(!fs.existsSync(`./${opts.lowerCaseName}/details`)) {
+    fs.mkdirSync(`./${opts.lowerCaseName}/details`);
   }
 };
 
@@ -85,6 +91,91 @@ const writePrimaryReactComponent = (opts) => {
   `;
 
   writeDataToFile(`./${opts.lowerCaseName}/${opts.lowerCaseName}.js`, fileData);
+};
+
+const writeActionsJs = (opts) => {
+  console.log(`writing actions.js`);
+  const fileData = `
+import {clearFetching, setFetching} from "../../store/actions";
+import {assertSuccess, parseResponseJson, withResponseClass} from "../../fetchHelpers";
+import {ACTIONS} from './reducers';
+
+const endpoint = '/api/${opts.lowerCaseName}';
+const headers = {'Content-Type': 'application/json', 'Accept': 'application/json'};
+
+const clear${opts.name}List = () => ({type: ACTIONS.CLEAR, payload: null});
+const replace${opts.name}List = (${opts.lowerCaseName}List) => ({type: ACTIONS.REPLACE, payload: ${opts.lowerCAseName}List});
+const add${opts.name} = (${opts.lowerCaseName}) => ({type: ACTIONS.ADD, payload: ${opts.lowerCaseName}});
+const remove${opts.name} = (${opts.lowerCaseName}) => ({type: ACTIONS.REMOVE, payload: ${opts.lowerCaseName}});
+
+export const load${opts.name}List = () => (dispatch) => {
+  dispatch(setFetching());
+
+  return fetch(endpoint)
+    .then(withResponseClass)
+    .then(assertSuccess)
+    .then(parseResponseJson)
+    .then((json) => {
+      dispatch(replace${opts.name}List(json.data));
+      return dispatch(clearFetching());
+    })
+    .catch((error) => {
+      console.error(JSON.stringify(error));
+      return dispatch(clearFetching());
+    });
+};
+
+export const save${opts.name} = (${opts.lowerCaseName}) => (dispatch) => {
+  dispatch(setFetching());
+
+  return fetch(endpoint, { method: 'put', headers: headers })
+    .then(withResponseClass)
+    .then(assertSuccess)
+    .then(parseResponseJson)
+    .then((json) => {
+      dispatch(clearFetching());
+    })
+    .catch((error) => {
+      console.error(JSON.stringify(error));
+      dispatch(clearFecthing());
+    });
+};
+
+  `;
+  
+  writeDataToFile(`./${opts.lowerCaseName}/actions.js`, fileData); 
+};
+
+const writePrimaryCss = (opts) => {
+  console.log(`writing primary css`);
+  const fileData = ``;
+  writeDataToFile(`./${opts.lowerCaseName}/${opts.lowerCaseName}.css`, fileData);
+};
+
+const writePrimaryReduxComponent = (opts) => {
+  console.log(`writing primary Redux component`);
+  const fileData = `
+    import { connect } from 'react-redux';
+    import { withRouter } from 'react-router-dom';
+    import {load${opts.name}List} from "./actions";
+    import ${opts.name} from "./${opts.lowerCaseName}";
+
+    const mapStateToProps = () => state => {
+      return {
+        ${opts.lowerCaseName}: state.${opts.lowerCaseName}.${opts.lowerCaseName}List
+      };
+    };
+
+    const mapDispatchToProps = () => dispatch => {
+      return {
+        load${opts.name}List: () => dispatch(load${opts.name}List())
+      };
+    };
+
+    export default withRouter(connect(mapStateToProps, mapDispatchToProps)(${opts.name}));
+  `;
+
+  writeDataToFile(`./${opts.lowerCaseName}/${opts.lowerCaseName}.container.js`, fileData);
 };
 
 const writeReducersJs = (opts) => {
