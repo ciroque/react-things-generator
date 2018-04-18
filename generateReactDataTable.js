@@ -102,19 +102,19 @@ import {clearFetching, setFetching} from "../../store/actions";
 import {assertSuccess, parseResponseJson, withResponseClass} from "../../fetchHelpers";
 import {ACTIONS} from './reducers';
 
-const endpoint = '/api/${opts.lowerCaseName}';
+const baseUri = '/api/${opts.lowerCaseName}';
 const headers = {'Content-Type': 'application/json', 'Accept': 'application/json'};
 
-const clear${opts.name}List = () => ({type: ACTIONS.CLEAR, payload: null});
-const replace${opts.name}List = (${opts.lowerCaseName}List) => ({type: ACTIONS.REPLACE, payload: ${opts.lowerCAseName}List});
-const add${opts.name} = (${opts.lowerCaseName}) => ({type: ACTIONS.ADD, payload: ${opts.lowerCaseName}});
-const remove${opts.name} = (${opts.lowerCaseName}) => ({type: ACTIONS.REMOVE, payload: ${opts.lowerCaseName}});
-const update${opts.name} = (${opts.lowerCaseName}) => ({type: ACTIONS.UPDATE, payload: ${opts.lowerCaseName}});
+export const clear${opts.name}List = () => ({type: ACTIONS.CLEAR, payload: null});
+export const replace${opts.name}List = (${opts.lowerCaseName}List) => ({type: ACTIONS.REPLACE, payload: ${opts.lowerCAseName}List});
+export const add${opts.name} = (${opts.lowerCaseName}) => ({type: ACTIONS.ADD, payload: ${opts.lowerCaseName}});
+export const remove${opts.name} = (${opts.lowerCaseName}) => ({type: ACTIONS.REMOVE, payload: ${opts.lowerCaseName}});
+export const update${opts.name} = (${opts.lowerCaseName}) => ({type: ACTIONS.UPDATE, payload: ${opts.lowerCaseName}});
 
 export const load${opts.name}List = () => (dispatch) => {
   dispatch(setFetching());
 
-  return fetch(endpoint)
+  return fetch(baseUri)
     .then(withResponseClass)
     .then(assertSuccess)
     .then(parseResponseJson)
@@ -123,15 +123,16 @@ export const load${opts.name}List = () => (dispatch) => {
       return dispatch(clearFetching());
     })
     .catch((error) => {
-      console.error(JSON.stringify(error));
       return dispatch(clearFetching());
     });
 };
 
 export const save${opts.name} = (${opts.lowerCaseName}) => (dispatch) => {
   dispatch(setFetching());
+  const endpoint = `${baseUri}/${${opts.lowerCaseName}.id}`;
+  const body = JSON.stringify(${opts.lowerCaseName});
 
-  return fetch(endpoint, { method: 'put', headers: headers })
+  return fetch(endpoint, { method: 'put', headers: headers, body: body })
     .then(withResponseClass)
     .then(assertSuccess)
     .then(parseResponseJson)
@@ -139,10 +140,26 @@ export const save${opts.name} = (${opts.lowerCaseName}) => (dispatch) => {
       dispatch(clearFetching());
     })
     .catch((error) => {
-      console.error(JSON.stringify(error));
       dispatch(clearFecthing());
     });
 };
+
+export const delete%{opts.name} = (${opts.lowerCaseName}) => (dispatch) => {
+  dispatch(setFetching());
+  const endpoint = `${baseUri}/${opts.lowerCaseName}`;
+  return fetch(endpoint, {method: 'delete', headers: headers})
+    .then(withResponseClass)
+    .then(assertSuccess)
+    .then(parseResponseJson)
+    .then((json) => {
+      dispatch(removePerson(person));
+      return dispatch(clearFetching());
+    })
+    .catch((error) => {
+      return dispatch(clearFetching());
+    });
+};
+
 
   `;
   
@@ -210,7 +227,7 @@ const writeReducersJs = (opts) => {
         }
 
         case ACTIONS.REMOVE: {
-          return state.filter(${opts.lowerCaseName} => ${opts.lowerCaseName} !== payload);
+          return state.filter(${opts.lowerCaseName} => ${opts.lowerCaseName}.id !== payload.id);
         }
 
         case ACTIONS.REPLACE: {
@@ -245,6 +262,7 @@ const writeDetailsReduxComponent = (opts) => {
 import { connect } from 'react-redux';
 import { withRouter } from 'react-router-dom';
 import Details from "./details";
+import {delete${opts.name}, save${opts.name}, update${opts.name}} from "../actions";
 
 const mapStateToProps = () => state => {
   return {};
@@ -273,12 +291,15 @@ import './details.css';
 export default class Details extends React.Component {
   constructor(props) {
     super(props);
+    this.state = Object.assign({}, props.record);
   }
 
   handleInputChange = (evt) => {
     const target = evt.target;
     const value = target.value;
-    return this.props.update${opts.name}(target, value);
+    const name = target.name;
+    const updated = Object.assign({}, this.props.record, {[name]: value});
+    return this.setState(updated);
   };
 
   renderForm = () => {
@@ -293,10 +314,12 @@ export default class Details extends React.Component {
       <div className="toolbar-root">
         <button
           className="btn btn-success"
+		  onClick={() => this.props.save${opts.name}(this.state)}
         >Save</button>
 
         <button
           className="btn btn-danger"
+		  onClick={() => this.props.delete${opts.name}(this.state)}
         >Delete</button>
       </div>
     );
